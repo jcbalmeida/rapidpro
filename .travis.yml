@@ -55,7 +55,7 @@ install:
   # switch to Node 10 and install our node dependencies
   - nvm install 10
   - nvm use 10
-  - npm install
+  - yarn
 
 before_script:
   # setup test database
