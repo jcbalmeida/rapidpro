@@ -1969,12 +1969,6 @@ class Org(SmartModel):
         # our system label counts
         self.system_labels.all().delete()
 
-        for channel in self.channels.all():
-            channel.release()
-
-            channel.counts.all().delete()
-            channel.delete()
-
         # any airtime transfers associate with us go away
         self.airtime_transfers.all().delete()
 
@@ -1999,15 +1993,24 @@ class Org(SmartModel):
             contact.release(contact.modified_by)
             contact.delete()
 
-        # delete our contacts
+        # delete our fields
         for contactfield in self.contactfields(manager="all_fields").all():
             contactfield.release(contactfield.modified_by)
             contactfield.delete()
 
-        # and all of the groups
+        # delete our groups
         for group in self.all_groups.all():
             group.release()
             group.delete()
+
+        # delete our channels
+        for channel in self.channels.all():
+            channel.release()
+
+            channel.counts.all().delete()
+            channel.logs.all().delete()
+
+            channel.delete()
 
         # release all archives objects and files for this org
         Archive.release_org_archives(self)
