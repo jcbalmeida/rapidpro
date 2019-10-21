@@ -1,16 +1,21 @@
 from unittest.mock import patch
 
+import pytz
 from django_redis import get_redis_connection
 
 from django.conf import settings
-from django.test import override_settings
+from django.contrib.auth.models import User
+from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 
+from temba.archives.models import Archive
 from temba.channels.models import ChannelEvent
 from temba.flows.models import FlowStart
 from temba.mailroom.client import FlowValidationException, MailroomException, get_client
 from temba.msgs.models import Broadcast, Msg
+from temba.orgs.models import Org
 from temba.tests import MockResponse, TembaTest, matchers
+from temba.tests.integration import MockChannel
 from temba.utils import json
 
 from . import queue_interrupt
@@ -307,3 +312,45 @@ class MailroomQueueTest(TembaTest):
         actual_task = json.loads(r.zrange(f"batch:{org.id}", 0, 1)[0])
 
         self.assertEqual(actual_task, expected_task)
+
+
+class IntegrationTest(TransactionTestCase):
+    databases = ("default",)
+    serialized_rollback = True
+
+    def setUp(self):
+        self.admin = User.objects.create_user("admin", "admin@nyaruka.com", password="Qwerty123")
+        self.org = Org.objects.create(
+            name="Integration Test",
+            timezone=pytz.timezone("America/Bogota"),
+            brand=settings.DEFAULT_BRAND,
+            created_by=self.admin,
+            modified_by=self.admin,
+        )
+        self.org.administrators.add(self.admin)
+        self.org.initialize(topup_size=1000)
+
+        self.channel = MockChannel.create(self.org, self.admin)
+
+    def tearDown2(self):
+        self.channel.release()
+
+        users = self.org.get_org_users()
+
+        # monkey patch remote archive releasing so it's a noop
+        Archive.release_org_archives = lambda o: []
+
+        self.org.release(immediately=True)
+
+        assert Org.objects.count() == 0, "test org wasn't deleted"
+
+        for user in users:
+            user.release(brand=settings.DEFAULT_BRAND)
+            user.delete()
+
+        assert User.objects.filter(id__in=[u.id for u in users]).count() == 0, "test users weren't deleted"
+
+    def test_integration(self):
+        msg = self.channel.send("+593979099111", "hi there")
+
+        self.assertEqual("hi there", msg.text)
