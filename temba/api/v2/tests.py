@@ -22,6 +22,9 @@ from temba.api.models import APIToken, Resthook, WebHookEvent
 from temba.archives.models import Archive
 from temba.campaigns.models import Campaign, CampaignEvent, EventFire
 from temba.channels.models import Channel, ChannelEvent
+from temba.classifiers.models import Classifier
+from temba.classifiers.types.luis import LuisType
+from temba.classifiers.types.wit import WitType
 from temba.contacts.models import Contact, ContactField, ContactGroup
 from temba.flows.models import Flow, FlowLabel, FlowRun, FlowStart
 from temba.locations.models import BoundaryAlias
@@ -2321,7 +2324,7 @@ class APITest(TembaTest):
         response = self.fetchJSON(url, "flow_uuid=%s&campaign_uuid=%s&dependencies=xx" % (flow.uuid, campaign.uuid))
         self.assertResponseError(response, None, "dependencies must be one of none, flows, all")
 
-    @patch.object(ContactField, "MAX_ORG_CONTACTFIELDS", new=10)
+    @override_settings(MAX_ACTIVE_CONTACTFIELDS_PER_ORG=10)
     def test_fields(self):
         url = reverse("api.v2.fields")
 
@@ -2390,7 +2393,7 @@ class APITest(TembaTest):
 
         ContactField.user_fields.all().delete()
 
-        for i in range(ContactField.MAX_ORG_CONTACTFIELDS):
+        for i in range(settings.MAX_ACTIVE_CONTACTFIELDS_PER_ORG):
             ContactField.get_or_create(self.org, self.admin, "field%d" % i, "Field%d" % i)
 
         response = self.postJSON(url, None, {"label": "Age", "value_type": "numeric"})
@@ -3859,3 +3862,53 @@ class APITest(TembaTest):
                 }
             ],
         )
+
+    def test_classifiers(self):
+        url = reverse("api.v2.classifiers")
+        self.assertEndpointAccess(url)
+
+        # create some classifiers
+        c1 = Classifier.create(self.org, self.admin, WitType.slug, "Booker", {})
+        c1.intents.create(name="book_flight", external_id="book_flight", created_on=timezone.now(), is_active=True)
+        c1.intents.create(name="book_hotel", external_id="book_hotel", created_on=timezone.now(), is_active=False)
+        c1.intents.create(name="book_car", external_id="book_car", created_on=timezone.now(), is_active=True)
+
+        c2 = Classifier.create(self.org, self.admin, WitType.slug, "Old Booker", {})
+        c2.is_active = False
+        c2.save()
+
+        # on another org
+        Classifier.create(self.org2, self.admin, LuisType.slug, "Org2 Booker", {})
+
+        # no filtering
+        with self.assertNumQueries(NUM_BASE_REQUEST_QUERIES + 2):
+            response = self.fetchJSON(url)
+
+        resp_json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(resp_json["next"], None)
+        self.assertEqual(
+            resp_json["results"],
+            [
+                {
+                    "name": "Booker",
+                    "type": "wit",
+                    "uuid": str(c1.uuid),
+                    "intents": ["book_car", "book_flight"],
+                    "created_on": format_datetime(c1.created_on),
+                }
+            ],
+        )
+
+        # filter by uuid (not there)
+        response = self.fetchJSON(url, "uuid=09d23a05-47fe-11e4-bfe9-b8f6b119e9ab")
+        resp_json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(0, len(resp_json["results"]))
+
+        # filter by uuid present
+        response = self.fetchJSON(url, "uuid=" + str(c1.uuid))
+        resp_json = response.json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(1, len(resp_json["results"]))
+        self.assertEqual("Booker", resp_json["results"][0]["name"])

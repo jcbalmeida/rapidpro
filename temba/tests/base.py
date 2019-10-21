@@ -111,13 +111,13 @@ class TembaTestMixin:
 
         return Contact.get_or_create_by_urns(**kwargs)
 
-    def create_group(self, name, contacts=(), query=None):
+    def create_group(self, name, contacts=(), query=None, org=None):
         assert not (contacts and query), "can't provide contact list for a dynamic group"
 
         if query:
-            return ContactGroup.create_dynamic(self.org, self.user, name, query=query)
+            return ContactGroup.create_dynamic(org or self.org, self.user, name, query=query)
         else:
-            group = ContactGroup.create_static(self.org, self.user, name)
+            group = ContactGroup.create_static(org or self.org, self.user, name)
             if contacts:
                 group.contacts.add(*contacts)
             return group
@@ -125,9 +125,14 @@ class TembaTestMixin:
     def create_label(self, name, org=None):
         return Label.get_or_create(org or self.org, self.user, name)
 
-    def create_field(self, key, label, value_type=Value.TYPE_TEXT):
+    def create_field(self, key, label, value_type=Value.TYPE_TEXT, org=None):
         return ContactField.user_fields.create(
-            org=self.org, key=key, label=label, value_type=value_type, created_by=self.admin, modified_by=self.admin
+            org=org or self.org,
+            key=key,
+            label=label,
+            value_type=value_type,
+            created_by=self.admin,
+            modified_by=self.admin,
         )
 
     def create_incoming_msg(
@@ -332,7 +337,7 @@ class TembaTestMixin:
             status=status,
             duration=15,
         )
-        session = FlowSession.create(contact, connection=call)
+        session = FlowSession.objects.create(uuid=uuid4(), org=contact.org, contact=contact, connection=call)
         FlowRun.objects.create(org=self.org, flow=flow, contact=contact, connection=call, session=session)
         Msg.objects.create(
             org=self.org,
@@ -564,6 +569,9 @@ class TembaTest(TembaTestMixin, SmartminTest):
 
 class MockResponse(object):
     def __init__(self, status_code, text, method="GET", url="http://foo.com/", headers=None):
+        if headers is None:
+            headers = {}
+
         self.text = force_text(text)
         self.content = force_bytes(text)
         self.body = force_text(text)
@@ -574,9 +582,14 @@ class MockResponse(object):
         self.cookies = dict()
         self.streaming = False
         self.charset = "utf-8"
+        self.connection = dict()
+        self.raw = dict_to_struct("MockRaw", dict(version="1.1", status=status_code, headers=headers))
+        self.reason = ""
 
         # mock up a request object on our response as well
-        self.request = dict_to_struct("MockRequest", dict(method=method, url=url, body="request body"))
+        self.request = dict_to_struct(
+            "MockRequest", dict(method=method, url=url, body="request body", headers=headers)
+        )
 
     def add_header(self, key, value):
         self.headers[key] = value
