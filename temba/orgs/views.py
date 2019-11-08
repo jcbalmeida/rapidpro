@@ -1,5 +1,6 @@
 import itertools
 import logging
+import smtplib
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -951,6 +952,40 @@ class OrgCRUDL(SmartCRUDL):
                         raise ValidationError(_("You must enter the SMTP port"))
 
                     self.cleaned_data["smtp_password"] = smtp_password
+
+                    try:
+                        from temba.utils.email import send_custom_smtp_email
+
+                        admin_emails = [admin.email for admin in self.instance.get_org_admins().order_by("email")]
+
+                        branding = self.instance.get_branding()
+                        subject = _("%(name)s SMTP configuration test") % branding
+                        body = (
+                            _(
+                                "This email is a test to confirm the custom SMTP server configuration added to your %(name)s account."
+                            )
+                            % branding
+                        )
+
+                        send_custom_smtp_email(
+                            admin_emails,
+                            subject,
+                            body,
+                            smtp_from_email,
+                            smtp_host,
+                            smtp_port,
+                            smtp_username,
+                            smtp_password,
+                            True,
+                        )
+
+                    except smtplib.SMTPException as e:
+                        raise ValidationError(
+                            _("Failed to send email with STMP server configuration with error '%s'") % str(e)
+                        )
+                    except Exception:
+                        raise ValidationError(_("Failed to send email with STMP server configuration"))
+
                 return self.cleaned_data
 
             class Meta:
@@ -1919,7 +1954,7 @@ class OrgCRUDL(SmartCRUDL):
 
             slug = Org.get_unique_slug(self.form.cleaned_data["name"])
             obj.slug = slug
-            obj.brand = self.request.branding.get("host", settings.DEFAULT_BRAND)
+            obj.brand = self.request.branding.get("brand", settings.DEFAULT_BRAND)
 
             if obj.timezone.zone in pytz.country_timezones("US"):
                 obj.date_format = Org.DATE_FORMAT_MONTH_FIRST
@@ -2229,17 +2264,13 @@ class OrgCRUDL(SmartCRUDL):
                     formax.add_section(
                         "dtone",
                         reverse("orgs.org_dtone_account"),
-                        icon="icon-transferto",
+                        icon="icon-dtone",
                         action="redirect",
                         button=_("Connect"),
                     )
                 else:  # pragma: needs cover
                     formax.add_section(
-                        "dtone",
-                        reverse("orgs.org_dtone_account"),
-                        icon="icon-transferto",
-                        action="redirect",
-                        nobutton=True,
+                        "dtone", reverse("orgs.org_dtone_account"), icon="icon-dtone", action="redirect", nobutton=True
                     )
 
             if self.has_org_perm("orgs.org_chatbase"):
@@ -2299,12 +2330,12 @@ class OrgCRUDL(SmartCRUDL):
 
                     except Exception:
                         raise ValidationError(
-                            _("Your DTOne API key and secret seem invalid. Please check them again and retry.")
+                            _("Your DT One API key and secret seem invalid. Please check them again and retry.")
                         )
 
                     if error_code != 0 and info_txt != "pong":
                         raise ValidationError(
-                            _("Connecting to your DTOne account failed with error text: %s") % error_txt
+                            _("Connecting to your DT One account failed with error text: %s") % error_txt
                         )
 
                 return self.cleaned_data

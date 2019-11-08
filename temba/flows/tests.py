@@ -16,9 +16,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_text
 
+from temba.api.models import Resthook
 from temba.archives.models import Archive
 from temba.campaigns.models import Campaign, CampaignEvent
 from temba.channels.models import Channel
+from temba.classifiers.models import Classifier
 from temba.contacts.models import WHATSAPP_SCHEME, Contact, ContactField, ContactGroup
 from temba.mailroom import FlowValidationException
 from temba.msgs.models import Label
@@ -352,6 +354,36 @@ class FlowTest(TembaTest):
 
         response = self.client.get(reverse("flows.flow_editor_next", args=[self.flow.uuid]))
         self.assertFalse(response.context["mutable"])
+
+    def test_feature_filters(self):
+        self.login(self.admin)
+
+        # empty feature set
+        response = self.client.get(reverse("flows.flow_editor_next", args=[self.flow.uuid]))
+        self.assertEqual([], json.loads(response.context["feature_filters"]))
+
+        # with zapier
+        Resthook.objects.create(org=self.flow.org, created_by=self.admin, modified_by=self.admin)
+        response = self.client.get(reverse("flows.flow_editor_next", args=[self.flow.uuid]))
+        self.assertEqual(["resthook"], json.loads(response.context["feature_filters"]))
+
+        # add in a classifier
+        Classifier.objects.create(org=self.flow.org, config="", created_by=self.admin, modified_by=self.admin)
+        response = self.client.get(reverse("flows.flow_editor_next", args=[self.flow.uuid]))
+        self.assertEqual(["classifier", "resthook"], json.loads(response.context["feature_filters"]))
+
+        # add in an airtime connection
+        self.flow.org.connect_dtone("login", "token", self.admin)
+        response = self.client.get(reverse("flows.flow_editor_next", args=[self.flow.uuid]))
+        self.assertEqual(["airtime", "classifier", "resthook"], json.loads(response.context["feature_filters"]))
+
+        # change our channel to use a whatsapp scheme
+        self.channel.schemes = [WHATSAPP_SCHEME]
+        self.channel.save()
+        response = self.client.get(reverse("flows.flow_editor_next", args=[self.flow.uuid]))
+        self.assertEqual(
+            ["whatsapp", "airtime", "classifier", "resthook"], json.loads(response.context["feature_filters"])
+        )
 
     def test_flow_editor(self):
         self.login(self.admin)
@@ -4172,6 +4204,12 @@ class ExportFlowResultsTest(TembaTest):
         contact1_out3 = contact1_run1.get_messages().get(text__startswith="I love orange too")
         contact3_out1 = contact3_run1.get_messages().get(text="What is your favorite color?")
 
+        def msg_event_time(run, text):
+            for evt in run.get_msg_events():
+                if evt["msg"]["text"] == text:
+                    return iso8601.parse_date(evt["created_on"])
+            raise self.fail(f"no such message on run with text '{text}'")
+
         self.assertExcelRow(
             sheet_msgs,
             1,
@@ -4190,7 +4228,7 @@ class ExportFlowResultsTest(TembaTest):
             sheet_msgs,
             2,
             [
-                contact1_out1.contact.uuid,
+                self.contact.uuid,
                 "+250788382382",
                 "Eric",
                 contact1_out1.created_on,
@@ -4204,10 +4242,10 @@ class ExportFlowResultsTest(TembaTest):
             sheet_msgs,
             3,
             [
-                contact1_in1.contact.uuid,
+                self.contact.uuid,
                 "+250788382382",
                 "Eric",
-                contact1_in1.created_on,
+                msg_event_time(contact1_run1, "light beige"),
                 "IN",
                 "light beige",
                 "Test Channel",
@@ -4218,7 +4256,7 @@ class ExportFlowResultsTest(TembaTest):
             sheet_msgs,
             4,
             [
-                contact1_out2.contact.uuid,
+                self.contact.uuid,
                 "+250788382382",
                 "Eric",
                 contact1_out2.created_on,
@@ -4232,10 +4270,10 @@ class ExportFlowResultsTest(TembaTest):
             sheet_msgs,
             5,
             [
-                contact1_in2.contact.uuid,
+                self.contact.uuid,
                 "+250788382382",
                 "Eric",
-                contact1_in2.created_on,
+                msg_event_time(contact1_run1, "orange"),
                 "IN",
                 "orange",
                 "Test Channel",
@@ -4246,7 +4284,7 @@ class ExportFlowResultsTest(TembaTest):
             sheet_msgs,
             6,
             [
-                contact1_out3.contact.uuid,
+                self.contact.uuid,
                 "+250788382382",
                 "Eric",
                 contact1_out3.created_on,
@@ -5063,12 +5101,11 @@ class ExportFlowResultsTest(TembaTest):
                 contact1_in1.contact.uuid,
                 "+250788382382",
                 "Eric",
-                contact1_in1.created_on,
+                matchers.Datetime(),
                 "IN",
                 "light beige",
                 "Test Channel",
             ],
-            tz,
         )
         self.assertExcelRow(
             sheet_msgs,
@@ -5087,8 +5124,7 @@ class ExportFlowResultsTest(TembaTest):
         self.assertExcelRow(
             sheet_msgs,
             5,
-            [contact1_in2.contact.uuid, "+250788382382", "Eric", contact1_in2.created_on, "IN", "red", "Test Channel"],
-            tz,
+            [contact1_in2.contact.uuid, "+250788382382", "Eric", matchers.Datetime(), "IN", "red", "Test Channel"],
         )
         self.assertExcelRow(
             sheet_msgs,
@@ -5385,7 +5421,7 @@ class ExportFlowResultsTest(TembaTest):
         )
 
         # no channel or phone
-        self.assertExcelRow(sheet_msgs, 2, [run.contact.uuid, "", "Eric", in1.created_on, "IN", "blue", ""], tz)
+        self.assertExcelRow(sheet_msgs, 2, [run.contact.uuid, "", "Eric", matchers.Datetime(), "IN", "blue", ""])
 
         # now try setting a submitted by on our run
         run.submitted_by = self.admin
