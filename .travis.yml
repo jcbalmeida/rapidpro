@@ -45,17 +45,17 @@ install:
   - ./elasticsearch-${ES_VERSION}/bin/elasticsearch &
 
   # install mailroom
-  - MAILROOM_VERSION=2.0.34
+  - MAILROOM_VERSION=5.3.2
   - wget https://github.com/nyaruka/mailroom/releases/download/v${MAILROOM_VERSION}/mailroom_${MAILROOM_VERSION}_linux_amd64.tar.gz
   - tar -xvf mailroom_${MAILROOM_VERSION}_linux_amd64.tar.gz mailroom
 
   # install courier
-  - COURIER_VERSION=2.0.8
+  - COURIER_VERSION=5.3.0
   - wget https://github.com/nyaruka/courier/releases/download/v${COURIER_VERSION}/courier_${COURIER_VERSION}_linux_amd64.tar.gz
   - tar -xvf courier_${COURIER_VERSION}_linux_amd64.tar.gz courier
 
   # install rp-indexer
-  - RPINDEXER_VERSION=2.0.0
+  - RPINDEXER_VERSION=5.2.0
   - wget https://github.com/nyaruka/rp-indexer/releases/download/v${RPINDEXER_VERSION}/rp-indexer_${RPINDEXER_VERSION}_linux_amd64.tar.gz
   - tar -xvf rp-indexer_${RPINDEXER_VERSION}_linux_amd64.tar.gz
 
@@ -132,9 +132,6 @@ script:
 
   # run our Python unit tests on same database
   - coverage run manage.py test --settings=temba.settings_travis --keepdb --noinput --verbosity=2
-
-  # run our Python integration tests
-  - python manage.py integration_tests
 
   - set +e
 

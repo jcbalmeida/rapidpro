@@ -15,7 +15,7 @@ from temba.mailroom.client import FlowValidationException, MailroomException, ge
 from temba.msgs.models import Broadcast, Msg
 from temba.orgs.models import Org
 from temba.tests import MockResponse, TembaTest, matchers
-from temba.tests.integration import MockChannel
+from temba.tests.integration import TestChannel
 from temba.utils import json
 
 from . import queue_interrupt
@@ -330,9 +330,9 @@ class IntegrationTest(TransactionTestCase):
         self.org.administrators.add(self.admin)
         self.org.initialize(topup_size=1000)
 
-        self.channel = MockChannel.create(self.org, self.admin)
+        self.channel = TestChannel.create(self.org, self.admin)
 
-    def tearDown2(self):
+    def tearDown(self):
         self.channel.release()
 
         users = self.org.get_org_users()
