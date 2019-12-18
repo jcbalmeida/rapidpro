@@ -181,7 +181,6 @@ class FlowTest(TembaTest):
 
     def test_facebook_warnings(self):
         no_topic = self.get_flow("pick_a_number")
-        with_topic = self.get_flow("with_message_topic")
 
         # bring up broadcast dialog
         self.login(self.admin)
@@ -199,7 +198,9 @@ class FlowTest(TembaTest):
         self.assertContains(response, "does not specify a Facebook topic")
 
         # warning shouldn't be present for flow with a topic
+        with_topic = self.get_flow("with_message_topic")
         response = self.client.get(reverse("flows.flow_broadcast", args=[with_topic.id]))
+        print(response.content)
         self.assertNotContains(response, "does not specify a Facebook topic")
 
     def test_template_warnings(self):
