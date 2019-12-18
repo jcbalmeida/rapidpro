@@ -200,7 +200,6 @@ class FlowTest(TembaTest):
         # warning shouldn't be present for flow with a topic
         with_topic = self.get_flow("with_message_topic")
         response = self.client.get(reverse("flows.flow_broadcast", args=[with_topic.id]))
-        print(response.content)
         self.assertNotContains(response, "does not specify a Facebook topic")
 
     def test_template_warnings(self):

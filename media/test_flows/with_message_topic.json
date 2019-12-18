@@ -2,7 +2,7 @@
   "version": "13",
   "flows": [
     {
-      "uuid": "c07d368e-fe1d-469d-b267-bca02d17c3e3",
+      "uuid": "342547d4-e536-43e1-85eb-a1f22558bb16",
       "name": "Topic Flow",
       "spec_version": "13.0.0",
       "language": "eng",
@@ -12,28 +12,28 @@
       "localization": {},
       "nodes": [
         {
-          "uuid": "5bf98a89-d38d-40ba-8e5e-d54cad1777f1",
+          "uuid": "1a05d0db-270e-4e37-9231-6acc4eb4928c",
           "actions": [
             {
               "attachments": [],
               "text": "This is a message with a topic.",
               "type": "send_msg",
               "quick_replies": [],
-              "uuid": "b103d563-9320-40fe-8f96-c9d3fbe0262d",
+              "uuid": "2ecf5483-1a6e-415b-bcc0-2d38bad32328",
               "templating": null,
               "topic": "agent"
             }
           ],
           "exits": [
             {
-              "uuid": "29dd720b-00ed-4304-97b0-38c65bc38e30"
+              "uuid": "f4d67d87-92c4-45d8-b83e-ab06069e21c2"
             }
           ]
         }
       ],
       "_ui": {
         "nodes": {
-          "5bf98a89-d38d-40ba-8e5e-d54cad1777f1": {
+          "1a05d0db-270e-4e37-9231-6acc4eb4928c": {
             "position": {
               "left": 20,
               "top": 40
