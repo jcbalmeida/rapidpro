@@ -3284,7 +3284,7 @@ class FlowLabel(models.Model):
     def get_flows(self):
         return (
             Flow.objects.filter(Q(labels=self) | Q(labels__parent=self))
-            .filter(is_active=True, is_archived=False)
+            .filter(is_active=True, is_archived=False, org=self.org)
             .distinct()
         )
 

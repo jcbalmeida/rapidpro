@@ -805,7 +805,8 @@ class FlowCRUDL(SmartCRUDL):
 
         def derive_queryset(self, *args, **kwargs):
             qs = super().derive_queryset(*args, **kwargs)
-            return qs.exclude(is_system=True).exclude(is_active=False)
+            org = self.request.user.get_org()
+            return qs.filter(org=org).exclude(is_system=True).exclude(is_active=False)
 
         def get_campaigns(self):
             from temba.campaigns.models import CampaignEvent
@@ -825,9 +826,10 @@ class FlowCRUDL(SmartCRUDL):
 
         def get_flow_labels(self):
             labels = []
-            for label in FlowLabel.objects.filter(org=self.request.user.get_org(), parent=None):
+            org = self.request.user.get_org()
+            for label in FlowLabel.objects.filter(org=org, parent=None):
                 labels.append(
-                    dict(pk=label.pk, label=label.name, count=label.get_flows_count(), children=label.children.all())
+                    dict(pk=label.pk, label=label.name, count=label.get_flows_count(), children=label.children.filter(org=org))
                 )
             return labels
 
@@ -884,21 +886,24 @@ class FlowCRUDL(SmartCRUDL):
             return r"^%s/%s/(?P<campaign_id>\d+)/$" % (path, action)
 
         def derive_title(self, *args, **kwargs):
-            return self.get_campaign().name
+            current_campaign = self.get_campaign()
+            return current_campaign.name if current_campaign else ""
 
         def get_campaign(self):
+            org = self.request.user.get_org()
             if not self.campaign:
                 from temba.campaigns.models import Campaign
 
                 campaign_id = self.kwargs["campaign_id"]
-                self.campaign = Campaign.objects.filter(id=campaign_id).first()
+                self.campaign = Campaign.objects.filter(org=org, id=campaign_id).first()
             return self.campaign
 
         def get_queryset(self, **kwargs):
             from temba.campaigns.models import CampaignEvent
 
+            org = self.request.user.get_org()
             flow_ids = CampaignEvent.objects.filter(
-                campaign=self.get_campaign(), flow__is_archived=False, flow__is_system=False
+                campaign__org=org, campaign=self.get_campaign(), flow__is_archived=False, flow__is_system=False
             ).values("flow__id")
 
             flows = Flow.objects.filter(id__in=flow_ids).order_by("-modified_on")
@@ -934,16 +939,20 @@ class FlowCRUDL(SmartCRUDL):
             return r"^%s/%s/(?P<label_id>\d+)/$" % (path, action)
 
         def derive_title(self, *args, **kwargs):
-            return self.derive_label().name
+            current_label = self.derive_label()
+            return current_label.name if current_label else ""
 
         def derive_label(self):
-            return FlowLabel.objects.get(pk=self.kwargs["label_id"])
+            return FlowLabel.objects.filter(org=self.request.user.get_org(), pk=self.kwargs["label_id"]).first()
 
         def get_label_filter(self):
-            label = FlowLabel.objects.get(pk=self.kwargs["label_id"])
-            children = label.children.all()
+            label = self.derive_label()
+            if label is None:
+                return []
+
+            children = label.children.exists()
             if children:  # pragma: needs cover
-                return [l for l in FlowLabel.objects.filter(parent=label)] + [label]
+                return [l for l in FlowLabel.objects.filter(parent=label, org=label.org)] + [label]
             else:
                 return [label]
 

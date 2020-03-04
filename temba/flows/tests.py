@@ -1834,6 +1834,8 @@ class FlowTest(TembaTest):
         # create a flow for another org and a flow label
         flow2 = Flow.create(self.org2, self.admin2, "Flow2")
         flow_label = FlowLabel.objects.create(name="one", org=self.org, parent=None)
+        flow_label2 = FlowLabel.objects.create(name="two", org=self.org2, parent=None)
+        flow2.labels.add(flow_label2)
 
         flow_list_url = reverse("flows.flow_list")
         flow_archived_url = reverse("flows.flow_archived")
@@ -1929,6 +1931,23 @@ class FlowTest(TembaTest):
         # also shouldn't be able to view other flow
         response = self.client.get(reverse("flows.flow_editor", args=[flow2.uuid]))
         self.assertEqual(302, response.status_code)
+
+        # should see own org flow label
+        response = self.client.get(reverse("flows.flow_filter", args=[flow_label.pk]))
+        self.assertEqual(response.context["current_label"], flow_label)
+        self.assertEqual(200, response.status_code)
+
+        # also shouldn't be able to view other flow labels
+        response = self.client.get(reverse("flows.flow_filter", args=[flow_label2.pk]))
+        self.assertIsNone(response.context["current_label"])
+
+        # label flow count should check by org
+        self.assertEqual(1, flow_label2.get_flows_count())
+
+        # Even if mistakenly a different org flow ha added it in the past,
+        # that flow should be ignored
+        flow.labels.add(flow_label2)
+        self.assertEqual(1, flow_label2.get_flows_count())
 
     def test_flow_update_error(self):
 
