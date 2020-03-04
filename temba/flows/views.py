@@ -829,7 +829,12 @@ class FlowCRUDL(SmartCRUDL):
             org = self.request.user.get_org()
             for label in FlowLabel.objects.filter(org=org, parent=None):
                 labels.append(
-                    dict(pk=label.pk, label=label.name, count=label.get_flows_count(), children=label.children.filter(org=org))
+                    dict(
+                        pk=label.pk,
+                        label=label.name,
+                        count=label.get_flows_count(),
+                        children=label.children.filter(org=org),
+                    )
                 )
             return labels
 
