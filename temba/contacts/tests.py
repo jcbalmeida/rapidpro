@@ -7146,7 +7146,7 @@ class URNTest(TembaTest):
         self.assertEqual(URN.from_vk(12345), "vk:12345")
         self.assertEqual(URN.from_telegram(12345), "telegram:12345")
         self.assertEqual(URN.from_external("Aa0()+,-.:=@;$_!*'"), "ext:Aa0()+,-.:=@;$_!*'")
-
+        self.assertEqual(URN.from_rocketchat(12345), "rocketchat:12345")
         self.assertRaises(ValueError, URN.from_parts, "", "12345")
         self.assertRaises(ValueError, URN.from_parts, "tel", "")
         self.assertRaises(ValueError, URN.from_parts, "xxx", "12345")

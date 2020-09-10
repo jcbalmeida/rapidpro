@@ -62,6 +62,7 @@ FCM_SCHEME = "fcm"
 WHATSAPP_SCHEME = "whatsapp"
 WECHAT_SCHEME = "wechat"
 FRESHCHAT_SCHEME = "freshchat"
+ROCKETCHAT_SCHEME = "rocketchat"
 
 FACEBOOK_PATH_REF_PREFIX = "ref:"
 
@@ -82,6 +83,7 @@ URN_SCHEME_CONFIG = (
     (WHATSAPP_SCHEME, _("WhatsApp identifier"), WHATSAPP_SCHEME),
     (FRESHCHAT_SCHEME, _("Freshchat identifier"), FRESHCHAT_SCHEME),
     (VK_SCHEME, _("VK identifier"), VK_SCHEME),
+    (ROCKETCHAT_SCHEME, _("Rocket.Chat identifier"), ROCKETCHAT_SCHEME),
 )
 
 
@@ -384,6 +386,10 @@ class URN(object):
     @classmethod
     def from_wechat(cls, path):
         return cls.from_parts(WECHAT_SCHEME, path)
+
+    @classmethod
+    def from_rocketchat(cls, path):
+        return cls.from_parts(ROCKETCHAT_SCHEME, path)
 
 
 class UserContactFieldsQuerySet(models.QuerySet):
