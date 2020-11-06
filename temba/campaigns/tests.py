@@ -1226,8 +1226,10 @@ class CampaignTest(TembaTest):
         planting_reminder_new = campaign.events.get(is_active=True)
 
         # ok, set a planting date on one of our contacts
-        tomorrow = (datetime.now()+timedelta(days=1))
-        self.set_contact_field(self.farmer1, "planting_date", tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True)
+        tomorrow = datetime.now() + timedelta(days=1)
+        self.set_contact_field(
+            self.farmer1, "planting_date", tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True
+        )
 
         # should have one event now
         fire = EventFire.objects.get(event__is_active=True)
@@ -1247,7 +1249,9 @@ class CampaignTest(TembaTest):
 
         # change the date of our date
         after_tomorrow = tomorrow + timedelta(days=1)
-        self.set_contact_field(self.farmer1, "planting_date", after_tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True)
+        self.set_contact_field(
+            self.farmer1, "planting_date", after_tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True
+        )
 
         EventFire.update_campaign_events_for_contact(campaign, self.farmer1)
         fire = EventFire.objects.get()
@@ -1263,8 +1267,10 @@ class CampaignTest(TembaTest):
         self.assertFalse(EventFire.objects.all())
 
         # now something valid again
-        new_date = after_tomorrow+timedelta(days=1)
-        self.set_contact_field(self.farmer1, "planting_date", new_date.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True)
+        new_date = after_tomorrow + timedelta(days=1)
+        self.set_contact_field(
+            self.farmer1, "planting_date", new_date.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True
+        )
 
         EventFire.update_campaign_events_for_contact(campaign, self.farmer1)
         fire = EventFire.objects.get()
@@ -1365,7 +1371,9 @@ class CampaignTest(TembaTest):
 
         # create a contact not in the group, but with a field value
         tomorrow = datetime.now() + timedelta(days=1)
-        anna = self.create_contact("Anna", urn="tel:+250788333333", fields={"planting_date": tomorrow.strftime("%d-%m-%Y %H:%M")})
+        anna = self.create_contact(
+            "Anna", urn="tel:+250788333333", fields={"planting_date": tomorrow.strftime("%d-%m-%Y %H:%M")}
+        )
 
         # no contacts in our dynamic group yet, so no event fires
         self.assertEqual(EventFire.objects.filter(event=event).count(), 0)
