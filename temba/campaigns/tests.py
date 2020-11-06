@@ -1226,16 +1226,17 @@ class CampaignTest(TembaTest):
         planting_reminder_new = campaign.events.get(is_active=True)
 
         # ok, set a planting date on one of our contacts
-        self.set_contact_field(self.farmer1, "planting_date", "31-12-2020 12:30:10", legacy_handle=True)
+        tomorrow = (datetime.now()+timedelta(days=1))
+        self.set_contact_field(self.farmer1, "planting_date", tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True)
 
         # should have one event now
         fire = EventFire.objects.get(event__is_active=True)
-        self.assertEqual(5, fire.scheduled.day)
-        self.assertEqual(10, fire.scheduled.month)
-        self.assertEqual(2020, fire.scheduled.year)
+        self.assertEqual(tomorrow.day, fire.scheduled.day)
+        self.assertEqual(tomorrow.month, fire.scheduled.month)
+        self.assertEqual(tomorrow.year, fire.scheduled.year)
 
         # account for timezone difference, our org is in UTC+2
-        self.assertEqual(17 - 2, fire.scheduled.hour)
+        self.assertEqual(tomorrow.hour - 2, fire.scheduled.hour)
 
         self.assertEqual(self.farmer1, fire.contact)
 
@@ -1245,13 +1246,14 @@ class CampaignTest(TembaTest):
         self.assertIsNone(fire.fired)
 
         # change the date of our date
-        self.set_contact_field(self.farmer1, "planting_date", "06-10-2020 12:30:10", legacy_handle=True)
+        after_tomorrow = tomorrow + timedelta(days=1)
+        self.set_contact_field(self.farmer1, "planting_date", after_tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True)
 
         EventFire.update_campaign_events_for_contact(campaign, self.farmer1)
         fire = EventFire.objects.get()
-        self.assertEqual(6, fire.scheduled.day)
-        self.assertEqual(10, fire.scheduled.month)
-        self.assertEqual(2020, fire.scheduled.year)
+        self.assertEqual(after_tomorrow.day, fire.scheduled.day)
+        self.assertEqual(after_tomorrow.month, fire.scheduled.month)
+        self.assertEqual(after_tomorrow.year, fire.scheduled.year)
         self.assertEqual(self.farmer1, fire.contact)
         self.assertEqual(planting_reminder, fire.event)
 
@@ -1261,13 +1263,14 @@ class CampaignTest(TembaTest):
         self.assertFalse(EventFire.objects.all())
 
         # now something valid again
-        self.set_contact_field(self.farmer1, "planting_date", "07-10-2020 12:30:10", legacy_handle=True)
+        new_date = after_tomorrow+timedelta(days=1)
+        self.set_contact_field(self.farmer1, "planting_date", new_date.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True)
 
         EventFire.update_campaign_events_for_contact(campaign, self.farmer1)
         fire = EventFire.objects.get()
-        self.assertEqual(7, fire.scheduled.day)
-        self.assertEqual(10, fire.scheduled.month)
-        self.assertEqual(2020, fire.scheduled.year)
+        self.assertEqual(new_date.day, fire.scheduled.day)
+        self.assertEqual(new_date.month, fire.scheduled.month)
+        self.assertEqual(new_date.year, fire.scheduled.year)
         self.assertEqual(self.farmer1, fire.contact)
         self.assertEqual(planting_reminder, fire.event)
 
