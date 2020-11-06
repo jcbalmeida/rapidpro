@@ -1364,7 +1364,8 @@ class CampaignTest(TembaTest):
         )
 
         # create a contact not in the group, but with a field value
-        anna = self.create_contact("Anna", urn="tel:+250788333333", fields={"planting_date": "09-10-2020 12:30"})
+        tomorrow = datetime.now() + timedelta(days=1)
+        anna = self.create_contact("Anna", urn="tel:+250788333333", fields={"planting_date": tomorrow.strftime("%d-%m-%Y %H:%M")})
 
         # no contacts in our dynamic group yet, so no event fires
         self.assertEqual(EventFire.objects.filter(event=event).count(), 0)
