@@ -1235,8 +1235,7 @@ class CampaignTest(TembaTest):
         self.assertEqual(tomorrow.month, fire.scheduled.month)
         self.assertEqual(tomorrow.year, fire.scheduled.year)
 
-        # account for timezone difference, our org is in UTC+2
-        self.assertEqual(tomorrow.hour - 2, fire.scheduled.hour)
+        self.assertEqual(tomorrow.hour, fire.scheduled.hour)
 
         self.assertEqual(self.farmer1, fire.contact)
 
