@@ -1226,7 +1226,7 @@ class CampaignTest(TembaTest):
         planting_reminder_new = campaign.events.get(is_active=True)
 
         # ok, set a planting date on one of our contacts
-        self.set_contact_field(self.farmer1, "planting_date", "05-10-2020 12:30:10", legacy_handle=True)
+        self.set_contact_field(self.farmer1, "planting_date", "31-12-2020 12:30:10", legacy_handle=True)
 
         # should have one event now
         fire = EventFire.objects.get(event__is_active=True)
