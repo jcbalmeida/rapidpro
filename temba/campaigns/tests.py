@@ -1226,7 +1226,7 @@ class CampaignTest(TembaTest):
         planting_reminder_new = campaign.events.get(is_active=True)
 
         # ok, set a planting date on one of our contacts
-        tomorrow = datetime.now() + timedelta(days=1)
+        tomorrow = datetime.utcnow() + timedelta(days=1)
         self.set_contact_field(
             self.farmer1, "planting_date", tomorrow.strftime("%d-%m-%Y %H:%M:%S"), legacy_handle=True
         )
