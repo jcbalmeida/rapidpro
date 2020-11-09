@@ -1237,7 +1237,7 @@ class CampaignTest(TembaTest):
         self.assertEqual(tomorrow.month, fire.scheduled.month)
         self.assertEqual(tomorrow.year, fire.scheduled.year)
 
-        self.assertEqual(tomorrow.hour, fire.scheduled.hour)
+        self.assertEqual(15, fire.scheduled.hour)  # considering UTC-2 and delivery_hour at L:1197
 
         self.assertEqual(self.farmer1, fire.contact)
 
