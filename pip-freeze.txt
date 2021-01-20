@@ -21,7 +21,7 @@ chardet==3.0.4            # via requests
 click==6.7                # via black, pip-tools
 colorama==0.4.1
 coverage==4.5.3
-cryptography==2.9.2       # via pyjwt, python-telegram-bot
+cryptography==3.2       # via pyjwt, python-telegram-bot
 dj-database-url==0.5.0
 django-appconf==1.0.2     # via django-compressor
 django-compressor==2.2
