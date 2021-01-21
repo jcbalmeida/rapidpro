@@ -23,7 +23,7 @@
     "tw-watch": "watch 'npm run tw-build' ./static/scss"
   },
   "devDependencies": {
-    "bower": "1.8.8",
+    "bower": "1.8.12",
     "cssnano": "^4.1.10",
     "jasmine-core": "2.5.0",
     "postcss-cli": "7.1.1",
