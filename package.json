@@ -13,7 +13,7 @@
     "@nyaruka/temba-components": "0.8.8",
     "@tailwindcss/ui": "0.2.2",
     "fa-icons": "0.2.0",
-    "less": "2.7.1",
+    "less": "4.1.1",
     "react": "16.13.1",
     "react-dom": "16.13.1"
   },
